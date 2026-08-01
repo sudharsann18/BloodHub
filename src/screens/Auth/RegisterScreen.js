@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -24,17 +25,45 @@ export default function RegisterScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('user');
 
-  const handleRegister = () => {
-    // Firebase registration will be added later
+  const handleRegister = async () => {
 
-    if (role === 'user') {
-      navigation.replace('UserApp');
-    } else if (role === 'bloodbank') {
-      navigation.replace('BloodBankApp');
+  if (!name || !email || !phone || !password || !confirmPassword) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  try {
+
+    const response = await axios.post(
+      'http://localhost:8080/api/auth/register',
+      {
+        fullName: name,
+        email: email,
+        phone: phone,
+        password: password
+      }
+    );
+
+    alert(response.data);
+
+    navigation.navigate("Login");
+
+  } catch (error) {
+
+    if (error.response) {
+      alert(error.response.data);
     } else {
-      navigation.replace('DeliveryApp');
+      alert("Unable to connect to server");
     }
-  };
+
+  }
+
+};
 
   return (
     <SafeAreaView style={styles.container}>
