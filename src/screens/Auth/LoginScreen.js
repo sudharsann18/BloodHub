@@ -1,36 +1,73 @@
-import React, { useState } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import React, { useState } from "react";
 import {
   SafeAreaView,
   StyleSheet,
   View,
   TouchableOpacity,
-} from 'react-native';
-import { Text, TextInput, RadioButton } from 'react-native-paper';
+} from "react-native";
+import { Text, TextInput } from "react-native-paper";
 
-import PrimaryButton from '../../components/PrimaryButton';
+import PrimaryButton from "../../components/PrimaryButton";
 
-import { colors } from '../../constants/colors';
+import { colors } from "../../constants/colors";
 import {
   spacing,
   borderRadius,
   shadows,
-} from '../../constants/theme';
+} from "../../constants/theme";
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('user');
 
-  const handleLogin = () => {
-    // Firebase Authentication will be added later
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-    if (role === 'user') {
-      navigation.replace('UserApp');
-    } else if (role === 'bloodbank') {
-      navigation.replace('BloodBankApp');
-    } else {
-      navigation.replace('DeliveryApp');
+  const handleLogin = async () => {
+
+    if (!email || !password) {
+      alert("Please fill all fields");
+      return;
     }
+
+    try {
+
+      const response = await axios.post(
+        "http://localhost:8080/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
+
+      const user = response.data;
+
+      await AsyncStorage.setItem("token", user.token);
+      await AsyncStorage.setItem("role", user.role);
+      await AsyncStorage.setItem("name", user.fullName);
+
+      alert("Login Successful");
+
+      if (user.role === "USER") {
+        navigation.replace("UserApp");
+      }
+      else if (user.role === "BLOOD_BANK") {
+        navigation.replace("BloodBankApp");
+      }
+      else if (user.role === "DELIVERY_PARTNER") {
+        navigation.replace("DeliveryApp");
+      }
+
+    } catch (error) {
+
+      if (error.response) {
+        alert(error.response.data.message || error.response.data);
+      } else {
+        alert("Unable to connect to server");
+      }
+
+    }
+
   };
 
   return (
@@ -51,8 +88,8 @@ export default function LoginScreen({ navigation }) {
           label="Email"
           value={email}
           onChangeText={setEmail}
-          style={styles.input}
           keyboardType="email-address"
+          style={styles.input}
         />
 
         <TextInput
@@ -64,32 +101,6 @@ export default function LoginScreen({ navigation }) {
           style={styles.input}
         />
 
-        <Text style={styles.roleTitle}>
-          Select Role
-        </Text>
-
-        <RadioButton.Group
-          onValueChange={setRole}
-          value={role}
-        >
-
-          <View style={styles.radioRow}>
-            <RadioButton value="user" />
-            <Text>User</Text>
-          </View>
-
-          <View style={styles.radioRow}>
-            <RadioButton value="bloodbank" />
-            <Text>Blood Bank</Text>
-          </View>
-
-          <View style={styles.radioRow}>
-            <RadioButton value="delivery" />
-            <Text>Delivery Partner</Text>
-          </View>
-
-        </RadioButton.Group>
-
         <PrimaryButton
           label="Login"
           onPress={handleLogin}
@@ -97,7 +108,7 @@ export default function LoginScreen({ navigation }) {
         />
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('Register')}
+          onPress={() => navigation.navigate("Register")}
         >
           <Text style={styles.registerText}>
             Don't have an account? Register
@@ -114,7 +125,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     backgroundColor: colors.background,
     padding: spacing.lg,
   },
@@ -128,7 +139,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primaryRed,
   },
 
@@ -141,27 +152,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  roleTitle: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
   loginButton: {
     marginTop: spacing.lg,
   },
 
   registerText: {
     marginTop: spacing.lg,
-    textAlign: 'center',
+    textAlign: "center",
     color: colors.primaryRed,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
 });

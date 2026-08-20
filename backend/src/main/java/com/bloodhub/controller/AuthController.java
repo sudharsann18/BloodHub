@@ -1,5 +1,7 @@
 package com.bloodhub.controller;
 
+import com.bloodhub.dto.AuthResponse;
+import com.bloodhub.dto.LoginRequest;
 import com.bloodhub.dto.RegisterRequest;
 import com.bloodhub.service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +18,20 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<String> register(
+            @RequestBody RegisterRequest request) {
 
-        String response = authService.register(request);
+        return ResponseEntity.ok(
+                authService.register(request)
+        );
+    }
 
-        return ResponseEntity.ok(response);
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(
+            @RequestBody LoginRequest request) {
+
+        return ResponseEntity.ok(
+                authService.login(request)
+        );
     }
 }

@@ -27,7 +27,6 @@ import {
 export default function UserHomeScreen() {
   const navigation = useNavigation();
   const { sosRequest } = useSOS();
-
   const [selectedGroup, setSelectedGroup] = useState('A+');
   const [units, setUnits] = useState('2');
 

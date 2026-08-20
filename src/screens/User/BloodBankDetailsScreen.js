@@ -26,21 +26,26 @@ export default function BloodBankDetailsScreen() {
   const requestedGroup = route.params?.requestedGroup;
   const requestedUnits = route.params?.requestedUnits;
 
-  const reserveBlood = () => {
-  navigation.navigate('ReserveBlood', {
-    hospital: bank?.name,
-    bloodGroup: requestedGroup,
-    units: requestedUnits,
-  });
-};
+  // Blood bank's database user ID
+  const bloodBankId = bank?.id;
 
-const emergencyBlood = () => {
-  navigation.navigate('EmergencyBlood', {
-    hospital: bank?.name,
-    bloodGroup: requestedGroup,
-    units: requestedUnits,
-  });
-};
+  const reserveBlood = () => {
+    navigation.navigate('ReserveBlood', {
+      hospital: bank?.name,
+      bloodBankId: bloodBankId,
+      bloodGroup: requestedGroup,
+      units: requestedUnits,
+    });
+  };
+
+  const emergencyBlood = () => {
+    navigation.navigate('EmergencyBlood', {
+      hospital: bank?.name,
+      bloodBankId: bloodBankId,
+      bloodGroup: requestedGroup,
+      units: requestedUnits,
+    });
+  };
 
   const callHospital = () => {
     Alert.alert(
@@ -78,6 +83,7 @@ const emergencyBlood = () => {
 
             <View style={styles.row}>
               <Text style={styles.label}>Distance</Text>
+
               <Text style={styles.value}>
                 {bank?.distance}
               </Text>
@@ -119,13 +125,14 @@ const emergencyBlood = () => {
               </Text>
 
               <Text style={styles.value}>
-                {bank?.bloodTypes.join(', ')}
+                {bank?.bloodTypes?.join(', ')}
               </Text>
             </View>
 
           </View>
 
           <View style={styles.statusCard}>
+
             <Text style={styles.statusTitle}>
               Availability
             </Text>
@@ -134,6 +141,7 @@ const emergencyBlood = () => {
               Blood is currently available.
               Reserve immediately before stock changes.
             </Text>
+
           </View>
 
           <TouchableOpacity
@@ -155,16 +163,16 @@ const emergencyBlood = () => {
           </TouchableOpacity>
 
           <PrimaryButton
-  label="🕒 Reserve Blood"
-  onPress={reserveBlood}
-  style={styles.reserveButton}
-/>
+            label="🕒 Reserve Blood"
+            onPress={reserveBlood}
+            style={styles.reserveButton}
+          />
 
-<PrimaryButton
-  label="🚨 Emergency Blood"
-  onPress={emergencyBlood}
-  style={styles.emergencyButton}
-/>
+          <PrimaryButton
+            label="🚨 Emergency Blood"
+            onPress={emergencyBlood}
+            style={styles.emergencyButton}
+          />
 
         </View>
 
@@ -289,9 +297,10 @@ const styles = StyleSheet.create({
   reserveButton: {
     marginTop: 25,
   },
+
   emergencyButton: {
-  marginTop: 12,
-  backgroundColor: '#D32F2F',
-},
+    marginTop: 12,
+    backgroundColor: '#D32F2F',
+  },
 
 });

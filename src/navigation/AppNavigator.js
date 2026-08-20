@@ -1,4 +1,5 @@
 import React from 'react';
+import BloodBankNavigator from './BloodBankNavigator';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -10,21 +11,6 @@ import { Text } from 'react-native-paper';
 
 const Stack = createNativeStackNavigator();
 
-function BloodBankApp() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
-      <Text variant="headlineMedium">
-        🏥 Blood Bank Dashboard
-      </Text>
-    </View>
-  );
-}
 
 function DeliveryApp() {
   return (
@@ -60,9 +46,9 @@ export default function AppNavigator() {
         />
 
         <Stack.Screen
-          name="BloodBankApp"
-          component={BloodBankApp}
-        />
+  name="BloodBankApp"
+  component={BloodBankNavigator}
+/>
 
         <Stack.Screen
           name="DeliveryApp"

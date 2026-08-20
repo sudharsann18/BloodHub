@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useSOS } from '../../context/SOSContext';
+import React, { useState, useRef } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -11,13 +10,17 @@ import {
 
 import { Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import PrimaryButton from '../../components/PrimaryButton';
 import InputField from '../../components/InputField';
 import BloodGroupDropdown from '../../components/BloodGroupDropdown';
 
+import { createSOS } from '../../services/api';
+
 import { colors } from '../../constants/colors';
 import { bloodGroups } from '../../constants/bloodGroups';
+
 import {
   borderRadius,
   shadows,
@@ -27,46 +30,226 @@ import {
 export default function SOSScreen() {
 
   const navigation = useNavigation();
-  const { broadcastSOS: createSOS } = useSOS();
+
+  // -----------------------------
+  // STATE
+  // -----------------------------
+
+  const [selectedGroup, setSelectedGroup] = useState('O-');
+  const [units, setUnits] = useState('1');
+  const [message, setMessage] = useState('');
+
+  const [loading, setLoading] = useState(false);
 
   /*
-    Later these values will come from Firebase.
-    For now they are dummy values.
-  */
+   * Prevents multiple API requests if the
+   * user clicks Broadcast SOS repeatedly.
+   */
+  const submittingRef = useRef(false);
 
-  const user = {
-    name: "Sudharsann",
-    phone: "9876543210",
-    bloodGroup: "O-",
+
+  // -----------------------------
+  // BLOOD GROUP CHANGE
+  // -----------------------------
+
+  const handleBloodGroupChange = (group) => {
+
+    console.log('Selected blood group:', group);
+
+    if (group) {
+      setSelectedGroup(group);
+    }
   };
 
-  const [selectedGroup, setSelectedGroup] = useState(user.bloodGroup);
-  const [units, setUnits] = useState("1");
-  const [message, setMessage] = useState("");
 
-  const broadcastSOS = () => {
+  // -----------------------------
+  // BROADCAST SOS
+  // -----------------------------
 
-  if (units.trim() === "") {
-    Alert.alert("Validation", "Enter required units");
-    return;
-  }
+  const broadcastSOS = async () => {
 
-  const sosData = {
-    patientName: user.name,
-    hospitalName: "Current Hospital",
-    phone: user.phone,
-    bloodGroup: selectedGroup,
-    units,
-    message,
-    distance: "2.5 km",
+    // Prevent duplicate requests
+    if (submittingRef.current) {
+      console.log('SOS submission already in progress');
+      return;
+    }
+
+    // -----------------------------
+    // VALIDATION
+    // -----------------------------
+
+    if (!selectedGroup) {
+
+      Alert.alert(
+        'Validation',
+        'Please select a blood group.'
+      );
+
+      return;
+    }
+
+    if (!units || units.trim() === '') {
+
+      Alert.alert(
+        'Validation',
+        'Enter required units.'
+      );
+
+      return;
+    }
+
+    const numberOfUnits = Number(units);
+
+    if (
+      isNaN(numberOfUnits) ||
+      numberOfUnits <= 0
+    ) {
+
+      Alert.alert(
+        'Validation',
+        'Units must be greater than 0.'
+      );
+
+      return;
+    }
+
+
+    // -----------------------------
+    // START SUBMISSION
+    // -----------------------------
+
+    submittingRef.current = true;
+    setLoading(true);
+
+
+    try {
+
+      // -----------------------------
+      // GET JWT TOKEN
+      // -----------------------------
+
+      const token =
+        await AsyncStorage.getItem('token');
+
+      if (!token) {
+
+        Alert.alert(
+          'Login Required',
+          'Please login again.'
+        );
+
+        return;
+      }
+
+
+      // -----------------------------
+      // SOS DATA
+      // -----------------------------
+
+      const sosData = {
+
+        hospital: 'Current Hospital',
+
+        bloodGroup: selectedGroup,
+
+        units: numberOfUnits,
+
+        message: message.trim(),
+
+      };
+
+
+      console.log(
+        'Sending SOS:',
+        sosData
+      );
+
+
+      // -----------------------------
+      // API REQUEST
+      // -----------------------------
+
+      const response = await createSOS(
+        sosData,
+        token
+      );
+
+
+      console.log(
+        'SOS created:',
+        response
+      );
+
+
+      // -----------------------------
+      // SUCCESS
+      // -----------------------------
+
+      Alert.alert(
+        'SOS Broadcasted',
+        'Your emergency blood request has been sent to nearby users and blood banks.',
+        [
+          {
+            text: 'OK',
+
+            onPress: () => {
+
+              navigation.navigate(
+                'SOSDetails',
+                response
+              );
+
+            },
+          },
+        ]
+      );
+
+
+    } catch (error) {
+
+      console.log(
+        'SOS creation error:',
+        error?.response?.data || error
+      );
+
+
+      let errorMessage =
+        'Failed to broadcast SOS.';
+
+
+      if (error?.response?.data?.message) {
+
+        errorMessage =
+          error.response.data.message;
+
+      }
+
+
+      Alert.alert(
+        'Error',
+        errorMessage
+      );
+
+
+    } finally {
+
+      /*
+       * Always unlock submission,
+       * whether request succeeds or fails.
+       */
+
+      submittingRef.current = false;
+
+      setLoading(false);
+
+    }
+
   };
 
-  // Store SOS globally
-  createSOS(sosData);
 
-  // Navigate to success screen
-  navigation.navigate("SOSDetails", sosData);
-};
+  // -----------------------------
+  // UI
+  // -----------------------------
 
   return (
 
@@ -77,57 +260,82 @@ export default function SOSScreen() {
         contentContainerStyle={styles.container}
       >
 
+        {/* BACK */}
+
         <TouchableOpacity
+          disabled={loading}
           onPress={() => navigation.goBack()}
         >
+
           <Text style={styles.back}>
             ← Back
           </Text>
+
         </TouchableOpacity>
 
+
         <View style={styles.card}>
+
+
+          {/* TITLE */}
 
           <Text style={styles.title}>
             🚨 Emergency SOS
           </Text>
 
+
           <Text style={styles.subtitle}>
             Your registered profile details will be
             automatically used while sending the SOS.
           </Text>
-                    <View style={styles.profileCard}>
+
+
+          {/* REGISTERED INFORMATION */}
+
+          <View style={styles.profileCard}>
 
             <Text style={styles.profileTitle}>
               Registered Information
             </Text>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>{user.name}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Phone</Text>
-              <Text style={styles.value}>{user.phone}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Blood Group</Text>
-              <Text style={styles.value}>{selectedGroup}</Text>
-            </View>
+            <Text style={styles.profileInfo}>
+              Your name and phone number will be
+              automatically attached to this SOS.
+            </Text>
 
           </View>
+
+
+          {/* BLOOD GROUP */}
 
           <View style={styles.formGroup}>
 
             <BloodGroupDropdown
               label="Blood Group"
               value={selectedGroup}
-              onSelect={setSelectedGroup}
+              onSelect={handleBloodGroupChange}
               options={bloodGroups}
             />
 
           </View>
+
+
+          {/* SELECTED GROUP DEBUG / CONFIRMATION */}
+
+          <View style={styles.selectedGroupCard}>
+
+            <Text style={styles.selectedGroupLabel}>
+              Selected Blood Group
+            </Text>
+
+            <Text style={styles.selectedGroupValue}>
+              {selectedGroup || 'Not selected'}
+            </Text>
+
+          </View>
+
+
+          {/* UNITS */}
 
           <View style={styles.formGroup}>
 
@@ -137,9 +345,13 @@ export default function SOSScreen() {
               onChangeText={setUnits}
               placeholder="Enter units"
               keyboardType="numeric"
+              editable={!loading}
             />
 
           </View>
+
+
+          {/* MESSAGE */}
 
           <View style={styles.formGroup}>
 
@@ -151,15 +363,40 @@ export default function SOSScreen() {
               multiline
               numberOfLines={5}
               style={styles.messageInput}
+              editable={!loading}
             />
 
           </View>
 
+
+          {/* BROADCAST */}
+
           <PrimaryButton
-            label="🚨 Broadcast SOS"
+
+            label={
+              loading
+                ? 'Broadcasting...'
+                : '🚨 Broadcast SOS'
+            }
+
             onPress={broadcastSOS}
+
             style={styles.button}
+
+            disabled={loading}
+
           />
+
+
+          {/* LOADING INFORMATION */}
+
+          {loading && (
+
+            <Text style={styles.loadingText}>
+              Sending emergency request...
+            </Text>
+
+          )}
 
         </View>
 
@@ -170,87 +407,237 @@ export default function SOSScreen() {
   );
 }
 
+
+// =====================================================
+// STYLES
+// =====================================================
+
 const styles = StyleSheet.create({
 
   safeArea: {
+
     flex: 1,
-    backgroundColor: colors.background,
+
+    backgroundColor:
+      colors.background,
+
   },
+
 
   container: {
+
     flexGrow: 1,
-    justifyContent: "center",
-    padding: spacing.lg,
+
+    justifyContent:
+      'center',
+
+    padding:
+      spacing.lg,
+
   },
+
 
   back: {
-    color: colors.primaryRed,
-    fontWeight: "700",
-    marginBottom: spacing.md,
-    fontSize: 16,
+
+    color:
+      colors.primaryRed,
+
+    fontWeight:
+      '700',
+
+    marginBottom:
+      spacing.md,
+
+    fontSize:
+      16,
+
   },
+
 
   card: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+
+    backgroundColor:
+      colors.white,
+
+    borderRadius:
+      borderRadius.xl,
+
+    padding:
+      spacing.lg,
+
     ...shadows.medium,
+
   },
+
 
   title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: colors.primaryRed,
+
+    fontSize:
+      26,
+
+    fontWeight:
+      '700',
+
+    color:
+      colors.primaryRed,
+
   },
+
 
   subtitle: {
-    marginTop: spacing.sm,
-    color: colors.gray,
-    lineHeight: 22,
+
+    marginTop:
+      spacing.sm,
+
+    color:
+      colors.gray,
+
+    lineHeight:
+      22,
+
   },
+
 
   profileCard: {
-    marginTop: spacing.xl,
-    backgroundColor: "#FFF5F5",
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+
+    marginTop:
+      spacing.xl,
+
+    backgroundColor:
+      '#FFF5F5',
+
+    borderRadius:
+      borderRadius.lg,
+
+    padding:
+      spacing.md,
+
   },
+
 
   profileTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.primaryRed,
-    marginBottom: spacing.md,
+
+    fontSize:
+      18,
+
+    fontWeight:
+      '700',
+
+    color:
+      colors.primaryRed,
+
+    marginBottom:
+      spacing.sm,
+
   },
 
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
+
+  profileInfo: {
+
+    color:
+      colors.gray,
+
+    lineHeight:
+      21,
+
   },
 
-  label: {
-    color: colors.gray,
-    fontWeight: "600",
-  },
-
-  value: {
-    color: colors.black,
-    fontWeight: "700",
-  },
 
   formGroup: {
-    marginTop: spacing.lg,
+
+    marginTop:
+      spacing.lg,
+
   },
+
+
+  selectedGroupCard: {
+
+    marginTop:
+      spacing.sm,
+
+    backgroundColor:
+      '#FFF5F5',
+
+    borderRadius:
+      borderRadius.lg,
+
+    padding:
+      spacing.md,
+
+    flexDirection:
+      'row',
+
+    justifyContent:
+      'space-between',
+
+    alignItems:
+      'center',
+
+  },
+
+
+  selectedGroupLabel: {
+
+    color:
+      colors.gray,
+
+    fontWeight:
+      '600',
+
+  },
+
+
+  selectedGroupValue: {
+
+    color:
+      colors.primaryRed,
+
+    fontSize:
+      18,
+
+    fontWeight:
+      '700',
+
+  },
+
 
   messageInput: {
-    minHeight: 120,
-    textAlignVertical: "top",
+
+    minHeight:
+      120,
+
+    textAlignVertical:
+      'top',
+
   },
 
+
   button: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+
+    marginTop:
+      spacing.xl,
+
+    marginBottom:
+      spacing.sm,
+
+  },
+
+
+  loadingText: {
+
+    textAlign:
+      'center',
+
+    marginTop:
+      spacing.sm,
+
+    color:
+      colors.gray,
+
+    fontSize:
+      14,
+
   },
 
 });

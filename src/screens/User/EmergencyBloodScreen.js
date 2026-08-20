@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
+import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import InputField from '../../components/InputField';
+
 import {
   SafeAreaView,
   StyleSheet,
   View,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
+
 import { Text } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -19,32 +25,103 @@ import {
 } from '../../constants/theme';
 
 export default function EmergencyBloodScreen() {
+
   const navigation = useNavigation();
   const route = useRoute();
 
   const {
     hospital = 'Apollo Blood Bank',
+    bloodBankId,
     bloodGroup = 'A+',
     units = '2',
   } = route.params || {};
 
-  const requestEmergency = () => {
-    navigation.navigate('Waiting', {
-      type: 'emergency',
-      hospital,
-      bloodGroup,
-      units,
-    });
+  const [patientName, setPatientName] = useState('');
+  const [location, setLocation] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+
+  const requestEmergency = async () => {
+
+    if (!patientName || !location || !contactNumber) {
+      Alert.alert(
+        'Validation',
+        'Please fill all fields'
+      );
+      return;
+    }
+
+    if (!bloodBankId) {
+      Alert.alert(
+        'Error',
+        'Blood bank information is missing. Please go back and select a blood bank again.'
+      );
+      return;
+    }
+
+    try {
+
+      const token = await AsyncStorage.getItem('token');
+
+      const response = await api.post(
+        '/request',
+        {
+          patientName,
+          bloodGroup,
+          units: Number(units),
+          hospital,
+          location,
+          contactNumber,
+          urgency: 'High',
+
+          // IMPORTANT
+          bloodBankId: Number(bloodBankId),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      Alert.alert(
+        'Success',
+        'Emergency Request Created Successfully!'
+      );
+
+      navigation.navigate('Waiting', {
+        type: 'emergency',
+        request: response.data,
+      });
+
+    } catch (error) {
+
+      console.log(
+        'Emergency request error:',
+        error?.response?.data || error
+      );
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+        'Failed to create request'
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>← Back</Text>
+
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.back}>
+            ← Back
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.card}>
@@ -58,6 +135,7 @@ export default function EmergencyBloodScreen() {
           </Text>
 
           <View style={styles.warningCard}>
+
             <Text style={styles.warningTitle}>
               ⚠ High Priority Request
             </Text>
@@ -66,6 +144,7 @@ export default function EmergencyBloodScreen() {
               The blood bank will immediately start preparing your order
               and assign the nearest delivery partner.
             </Text>
+
           </View>
 
           <View style={styles.infoCard}>
@@ -97,6 +176,28 @@ export default function EmergencyBloodScreen() {
 
           </View>
 
+          <InputField
+            label="Patient Name"
+            placeholder="Enter patient name"
+            value={patientName}
+            onChangeText={setPatientName}
+          />
+
+          <InputField
+            label="Current Location"
+            placeholder="Enter current location"
+            value={location}
+            onChangeText={setLocation}
+          />
+
+          <InputField
+            label="Contact Number"
+            placeholder="Enter contact number"
+            keyboardType="phone-pad"
+            value={contactNumber}
+            onChangeText={setContactNumber}
+          />
+
           <PrimaryButton
             label="🚨 Request Emergency Blood"
             onPress={requestEmergency}
@@ -106,13 +207,16 @@ export default function EmergencyBloodScreen() {
         </View>
 
       </ScrollView>
+
     </SafeAreaView>
   );
 }
 
 function InfoRow({ label, value }) {
+
   return (
     <View style={styles.row}>
+
       <Text style={styles.label}>
         {label}
       </Text>
@@ -120,6 +224,7 @@ function InfoRow({ label, value }) {
       <Text style={styles.value}>
         {value}
       </Text>
+
     </View>
   );
 }

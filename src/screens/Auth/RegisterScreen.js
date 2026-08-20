@@ -38,16 +38,26 @@ export default function RegisterScreen({ navigation }) {
   }
 
   try {
+    let selectedRole;
+
+if (role === "user") {
+  selectedRole = "USER";
+} else if (role === "bloodbank") {
+  selectedRole = "BLOOD_BANK";
+} else {
+  selectedRole = "DELIVERY_PARTNER";
+}
 
     const response = await axios.post(
-      'http://localhost:8080/api/auth/register',
-      {
-        fullName: name,
-        email: email,
-        phone: phone,
-        password: password
-      }
-    );
+  "http://localhost:8080/api/auth/register",
+  {
+    fullName: name,
+    email: email,
+    phone: phone,
+    password: password,
+    role: selectedRole
+  }
+);
 
     alert(response.data);
 

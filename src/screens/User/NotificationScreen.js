@@ -1,16 +1,25 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 
-import { useSOS } from '../../context/SOSContext';
+import {
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { getAvailableSOS } from '../../services/api';
 
 import { colors } from '../../constants/colors';
+
 import {
   spacing,
   borderRadius,
@@ -18,16 +27,119 @@ import {
 } from '../../constants/theme';
 
 export default function NotificationScreen() {
+
   const navigation = useNavigation();
 
-  const { sosRequest } = useSOS();
+  const [sosRequests, setSOSRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadSOSRequests = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const token =
+        await AsyncStorage.getItem('token');
+
+      if (!token) {
+        return;
+      }
+
+      const data =
+        await getAvailableSOS(token);
+
+      console.log(
+        "Available SOS:",
+        data
+      );
+
+      setSOSRequests(
+        Array.isArray(data) ? data : []
+      );
+
+    } catch (error) {
+
+      console.log(
+        "SOS notification error:",
+        error?.response?.data || error
+      );
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+        "Failed to load SOS requests."
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
+
+  /*
+   * Reload every time the Notifications tab
+   * becomes active.
+   */
+  useFocusEffect(
+    useCallback(() => {
+
+      loadSOSRequests();
+
+    }, [])
+  );
+
+  const openSOS = (sos) => {
+
+    navigation.navigate(
+      'Home',
+      {
+        screen: 'SOSResponse',
+        params: {
+          id: sos.id,
+
+          patientName:
+            sos.patientName,
+
+          bloodGroup:
+            sos.bloodGroup,
+
+          hospital:
+            sos.hospital,
+
+          units:
+            sos.units,
+
+          phone:
+            sos.phone,
+
+          message:
+            sos.message,
+
+          status:
+            sos.status,
+
+          requestedBy:
+            sos.requestedBy,
+
+          requesterName:
+            sos.requesterName,
+        },
+      }
+    );
+  };
 
   return (
+
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ padding: spacing.lg }}
+      contentContainerStyle={{
+        padding: spacing.lg,
+      }}
       showsVerticalScrollIndicator={false}
     >
+
       <Text style={styles.title}>
         Notifications
       </Text>
@@ -36,70 +148,95 @@ export default function NotificationScreen() {
         Emergency SOS Requests
       </Text>
 
-      {sosRequest ? (
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() =>
-            navigation.navigate('Home', {
-              screen: 'SOSResponse',
-              params: {
-                patientName: sosRequest.patientName,
-                bloodGroup: sosRequest.bloodGroup,
-                hospital: sosRequest.hospitalName,
-                units: sosRequest.units,
-                distance: sosRequest.distance,
-                phone: sosRequest.phone,
-                message: sosRequest.message,
-              },
-            })
-          }
-        >
-          <Text style={styles.icon}>🚨</Text>
+      {loading ? (
 
-          <View style={styles.content}>
-            <Text style={styles.cardTitle}>
-              Emergency Blood Request
-            </Text>
-
-            <Text style={styles.text}>
-              Patient : {sosRequest.patientName}
-            </Text>
-
-            <Text style={styles.text}>
-              Blood Group : {sosRequest.bloodGroup}
-            </Text>
-
-            <Text style={styles.text}>
-              Units : {sosRequest.units}
-            </Text>
-
-            <Text style={styles.text}>
-              Hospital : {sosRequest.hospitalName}
-            </Text>
-
-            <Text style={styles.text}>
-              Status : {sosRequest.status}
-            </Text>
-
-            <Text style={styles.view}>
-              Tap to View →
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ) : (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+
+          <Text style={styles.emptyText}>
+            Loading SOS requests...
+          </Text>
+
+        </View>
+
+      ) : sosRequests.length > 0 ? (
+
+        sosRequests.map((sos) => (
+
+          <TouchableOpacity
+            key={sos.id}
+            style={styles.card}
+            onPress={() => openSOS(sos)}
+          >
+
+            <Text style={styles.icon}>
+              🚨
+            </Text>
+
+            <View style={styles.content}>
+
+              <Text style={styles.cardTitle}>
+                Emergency Blood Request
+              </Text>
+
+              <Text style={styles.text}>
+                Patient: {sos.patientName}
+              </Text>
+
+              <Text style={styles.text}>
+                Blood Group: {sos.bloodGroup}
+              </Text>
+
+              <Text style={styles.text}>
+                Units: {sos.units}
+              </Text>
+
+              <Text style={styles.text}>
+                Hospital: {sos.hospital}
+              </Text>
+
+              {sos.message ? (
+                <Text style={styles.text}>
+                  Message: {sos.message}
+                </Text>
+              ) : null}
+
+              <Text style={styles.status}>
+                🔴 {sos.status}
+              </Text>
+
+              <Text style={styles.view}>
+                Tap to Respond →
+              </Text>
+
+            </View>
+
+          </TouchableOpacity>
+
+        ))
+
+      ) : (
+
+        <View style={styles.emptyCard}>
+
+          <Text style={styles.emptyIcon}>
+            🔔
+          </Text>
 
           <Text style={styles.emptyTitle}>
             No Notifications
           </Text>
 
           <Text style={styles.emptyText}>
-            There are no emergency SOS requests at the moment.
+            There are no emergency SOS requests
+            from other users at the moment.
           </Text>
+
         </View>
+
       )}
+
     </ScrollView>
+
   );
 }
 
@@ -129,6 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     flexDirection: 'row',
+    marginBottom: spacing.md,
     ...shadows.medium,
   },
 
@@ -152,6 +290,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.black,
     marginBottom: 6,
+  },
+
+  status: {
+    marginTop: spacing.sm,
+    color: colors.primaryRed,
+    fontWeight: '700',
   },
 
   view: {

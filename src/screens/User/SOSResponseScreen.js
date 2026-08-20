@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+
 import {
   SafeAreaView,
   StyleSheet,
@@ -9,14 +10,20 @@ import {
 } from 'react-native';
 
 import { Text } from 'react-native-paper';
+
 import {
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
 
-import { useSOS } from '../../context/SOSContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import {
+  acceptSOS,
+} from '../../services/api';
 
 import { colors } from '../../constants/colors';
+
 import {
   borderRadius,
   shadows,
@@ -28,37 +35,94 @@ export default function SOSResponseScreen() {
   const navigation = useNavigation();
   const route = useRoute();
 
-  const {
-    acceptSOS,
-    clearSOS,
-  } = useSOS();
+  const [loading, setLoading] = useState(false);
 
   const {
-    patientName = "John Doe",
-    bloodGroup = "O-",
-    hospital = "Apollo Hospital",
-    units = "2",
-    distance = "2.5 km",
-    phone = "9876543210",
-    message = "Urgent blood required for surgery.",
+    id,
+
+    patientName = '',
+    bloodGroup = '',
+    hospital = '',
+    units = '',
+    phone = '',
+    message = '',
   } = route.params || {};
 
-  const handleAcceptSOS = () => {
+  const handleAcceptSOS = async () => {
 
-    acceptSOS({
-      name: "Current Donor",
-      phone: "9999999999",
-    });
+    if (!id) {
 
-    navigation.navigate("SOSAccepted", {
-  patientName,
-  bloodGroup,
-  hospital,
-  units,
-  distance,
-  phone,
-  message,
-});
+      Alert.alert(
+        "Error",
+        "SOS request ID is missing."
+      );
+
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      const token =
+        await AsyncStorage.getItem('token');
+
+      if (!token) {
+
+        Alert.alert(
+          "Login Required",
+          "Please login again."
+        );
+
+        return;
+      }
+
+      const response =
+        await acceptSOS(id, token);
+
+      console.log(
+        "SOS accepted:",
+        response
+      );
+
+      Alert.alert(
+        "Success",
+        "You have accepted this SOS request.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+
+              navigation.navigate(
+                "SOSAccepted",
+                {
+                  ...response,
+                }
+              );
+
+            },
+          },
+        ]
+      );
+
+    } catch (error) {
+
+      console.log(
+        "SOS accept error:",
+        error?.response?.data || error
+      );
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+        "Unable to accept SOS request."
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
   };
 
   return (
@@ -73,9 +137,11 @@ export default function SOSResponseScreen() {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
         >
+
           <Text style={styles.back}>
             ← Back
           </Text>
+
         </TouchableOpacity>
 
         <View style={styles.card}>
@@ -102,17 +168,12 @@ export default function SOSResponseScreen() {
 
             <InfoRow
               label="Units Required"
-              value={units}
+              value={String(units)}
             />
 
             <InfoRow
               label="Hospital"
               value={hospital}
-            />
-
-            <InfoRow
-              label="Distance"
-              value={distance}
             />
 
             <InfoRow
@@ -129,7 +190,7 @@ export default function SOSResponseScreen() {
             </Text>
 
             <Text style={styles.message}>
-              {message}
+              {message || "No additional message."}
             </Text>
 
           </View>
@@ -139,13 +200,15 @@ export default function SOSResponseScreen() {
             onPress={() =>
               Alert.alert(
                 "Call",
-                "Phone integration will be added with Firebase."
+                `Patient phone: ${phone}`
               )
             }
           >
+
             <Text style={styles.buttonText}>
               📞 Call Patient
             </Text>
+
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -157,18 +220,30 @@ export default function SOSResponseScreen() {
               )
             }
           >
+
             <Text style={styles.buttonText}>
               📍 View Directions
             </Text>
+
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.acceptButton}
+            style={[
+              styles.acceptButton,
+              loading && styles.disabledButton,
+            ]}
             onPress={handleAcceptSOS}
+            disabled={loading}
           >
+
             <Text style={styles.buttonText}>
-              ❤️ I'm Coming to Donate
+
+              {loading
+                ? "Accepting..."
+                : "❤️ I'm Coming to Donate"}
+
             </Text>
+
           </TouchableOpacity>
 
         </View>
@@ -181,21 +256,28 @@ export default function SOSResponseScreen() {
 }
 
 function InfoRow({ label, value }) {
+
   return (
+
     <View style={styles.row}>
+
       <Text style={styles.label}>
         {label}
       </Text>
 
       <Text style={styles.value}>
-        {value}
+        {value || '-'}
       </Text>
+
     </View>
+
   );
+
 }
 
 const styles = StyleSheet.create({
-      safeArea: {
+
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
@@ -301,6 +383,10 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+  },
+
+  disabledButton: {
+    opacity: 0.6,
   },
 
   buttonText: {

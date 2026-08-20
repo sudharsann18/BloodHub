@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   SafeAreaView,
@@ -7,6 +7,9 @@ import {
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useRoute } from '@react-navigation/native';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../services/api';
 
 import { colors } from '../../constants/colors';
 import {
@@ -28,6 +31,43 @@ const WaitingScreen = () => {
   } = route.params || {};
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [request, setRequest] = useState(null);
+const [loading, setLoading] = useState(true);
+
+  const fetchLatestRequest = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+
+    let response;
+
+    if (type === "reservation") {
+      response = await api.get("/reservation/my", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setRequest(response.data);
+
+    } else {
+      response = await api.get("/request/my", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.length > 0) {
+        setRequest(response.data[response.data.length - 1]);
+      }
+    }
+
+  } catch (error) {
+    console.log("Failed to fetch latest data:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -48,6 +88,17 @@ const WaitingScreen = () => {
     animation.start();
     return () => animation.stop();
   }, []);
+  useEffect(() => {
+
+  fetchLatestRequest();
+
+  const interval = setInterval(() => {
+    fetchLatestRequest();
+  }, 5000);
+
+  return () => clearInterval(interval);
+
+}, []);
 
   const isEmergency = type === 'emergency';
 
@@ -83,31 +134,48 @@ const WaitingScreen = () => {
           <View style={styles.infoBox}>
 
             <InfoRow
-              label="Hospital"
-              value={hospital}
-            />
+  label="Patient"
+  value={request?.patientName || "Loading..."}
+/>
 
-            <InfoRow
-              label="Blood Group"
-              value={bloodGroup}
-            />
+<InfoRow
+  label="Hospital"
+  value={request?.hospital || "Loading..."}
+/>
 
-            <InfoRow
-              label="Units"
-              value={String(units)}
-            />
+<InfoRow
+  label="Blood Group"
+  value={request?.bloodGroup || "Loading..."}
+/>
+
+<InfoRow
+  label="Units"
+  value={request ? String(request.units) : "Loading..."}
+/>
+<InfoRow
+  label="Status"
+  value={request?.status || "Loading..."}
+/>
 
             {!isEmergency && (
               <>
                 <InfoRow
-                  label="Delivery Date"
-                  value={date}
-                />
+  label="Delivery Date"
+  value={
+    request?.reservationDate
+      ? request.reservationDate
+      : date
+  }
+/>
 
-                <InfoRow
-                  label="Delivery Time"
-                  value={time}
-                />
+<InfoRow
+  label="Delivery Time"
+  value={
+    request?.reservationTime
+      ? request.reservationTime
+      : time
+  }
+/>
               </>
             )}
 
@@ -119,10 +187,19 @@ const WaitingScreen = () => {
             </Text>
 
             <Text style={styles.statusText}>
-              {isEmergency
-                ? 'Searching for the nearest delivery partner...'
-                : 'Waiting for the scheduled delivery process.'}
-            </Text>
+  {request?.status === "REQUESTED" &&
+    (type === "reservation"
+      ? "Waiting for blood bank approval..."
+      : "Searching for the nearest delivery partner...")}
+
+  {request?.status === "ACCEPTED" &&
+    (type === "reservation"
+      ? "Blood bank accepted your reservation. Preparing blood units..."
+      : "Blood bank accepted your request. Preparing blood units...")}
+
+  {request?.status === "COMPLETED" &&
+    "Blood delivered successfully."}
+</Text>
           </View>
 
         </View>
