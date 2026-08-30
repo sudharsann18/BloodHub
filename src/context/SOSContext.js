@@ -1,34 +1,34 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+} from 'react';
 
 const SOSContext = createContext();
 
 export const SOSProvider = ({ children }) => {
+
   const [sosRequest, setSOSRequest] = useState(null);
 
-  // Create a new SOS request
+  // Store the REAL SOS returned by backend
   const broadcastSOS = (request) => {
-    setSOSRequest({
-      id: Date.now().toString(),
-      status: 'Pending',
-      createdAt: new Date().toLocaleString(),
-      ...request,
-    });
+
+    setSOSRequest(request);
+
   };
 
-  // Donor accepts the SOS
-  const acceptSOS = (donor) => {
-    if (!sosRequest) return;
+  // Update requester-side SOS when backend data is received
+  const updateSOS = (request) => {
 
-    setSOSRequest({
-      ...sosRequest,
-      status: 'Accepted',
-      acceptedBy: donor,
-    });
+    setSOSRequest(request);
+
   };
 
-  // Remove the SOS (used after completion/cancel)
+  // Remove SOS after completion/cancel
   const clearSOS = () => {
+
     setSOSRequest(null);
+
   };
 
   return (
@@ -36,7 +36,7 @@ export const SOSProvider = ({ children }) => {
       value={{
         sosRequest,
         broadcastSOS,
-        acceptSOS,
+        updateSOS,
         clearSOS,
       }}
     >
@@ -46,5 +46,7 @@ export const SOSProvider = ({ children }) => {
 };
 
 export const useSOS = () => {
+
   return useContext(SOSContext);
+
 };

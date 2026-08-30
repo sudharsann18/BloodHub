@@ -95,21 +95,14 @@ public class SOSService {
     // USER SEES THEIR OWN SOS
     // ==========================================
 
+    // ==========================================
+// USER'S OWN SOS
+// ==========================================
+
     public List<SOSResponseDTO> getMySOS(
             String token) {
 
         User user = getUserFromToken(token);
-
-        /*
-         * IMPORTANT:
-         *
-         * Do NOT throw an error when the user has
-         * an active SOS.
-         *
-         * The requester needs to call this endpoint
-         * to check whether someone has accepted
-         * their SOS.
-         */
 
         return sosRepository
                 .findByRequestedByOrderByIdDesc(user)
@@ -221,6 +214,43 @@ public class SOSService {
                 .stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    // ==========================================
+// GET SINGLE SOS
+// ==========================================
+
+    public SOSResponseDTO getSOSById(
+            Long id,
+            String token) {
+
+        User user = getUserFromToken(token);
+
+        SOSRequest sos = sosRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "SOS request not found"));
+
+        // Only the requester or accepted donor
+        // can view this SOS
+        boolean isRequester =
+                sos.getRequestedBy() != null &&
+                        sos.getRequestedBy().getId()
+                                .equals(user.getId());
+
+        boolean isDonor =
+                sos.getAcceptedBy() != null &&
+                        sos.getAcceptedBy().getId()
+                                .equals(user.getId());
+
+        if (!isRequester && !isDonor) {
+
+            throw new RuntimeException(
+                    "You are not authorized to view this SOS");
+        }
+
+        return convertToResponse(sos);
     }
 
     // ==========================================

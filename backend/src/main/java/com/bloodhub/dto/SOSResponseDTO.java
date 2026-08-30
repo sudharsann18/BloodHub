@@ -28,12 +28,21 @@ public class SOSResponseDTO {
 
     private LocalDateTime createdAt;
 
-    // Requester details
-    private Long requestedById;
-    private String requestedByName;
+    // ==========================================
+    // REQUESTER DETAILS
+    // ==========================================
 
-    // Donor details
-    private Long acceptedById;
-    private String acceptedByName;
-    private String acceptedByPhone;
+    private Long requesterId;
+
+    private String requesterName;
+
+    // ==========================================
+    // DONOR DETAILS
+    // ==========================================
+
+    private Long donorId;
+
+    private String donorName;
+
+    private String donorPhone;
 }

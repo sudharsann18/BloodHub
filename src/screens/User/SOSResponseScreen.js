@@ -39,7 +39,6 @@ export default function SOSResponseScreen() {
 
   const {
     id,
-
     patientName = '',
     bloodGroup = '',
     hospital = '',
@@ -48,13 +47,18 @@ export default function SOSResponseScreen() {
     message = '',
   } = route.params || {};
 
+
+  // =====================================================
+  // ACCEPT SOS
+  // =====================================================
+
   const handleAcceptSOS = async () => {
 
     if (!id) {
 
       Alert.alert(
-        "Error",
-        "SOS request ID is missing."
+        'Error',
+        'SOS request ID is missing.'
       );
 
       return;
@@ -70,52 +74,48 @@ export default function SOSResponseScreen() {
       if (!token) {
 
         Alert.alert(
-          "Login Required",
-          "Please login again."
+          'Login Required',
+          'Please login again.'
         );
 
         return;
       }
 
+      console.log(
+        'Accepting SOS ID:',
+        id
+      );
+
       const response =
         await acceptSOS(id, token);
 
       console.log(
-        "SOS accepted:",
+        'SOS accepted:',
         response
       );
 
-      Alert.alert(
-        "Success",
-        "You have accepted this SOS request.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
 
-              navigation.navigate(
-                "SOSAccepted",
-                {
-                  ...response,
-                }
-              );
+      // =================================================
+      // IMPORTANT
+      // Replace current screen with SOSAccepted
+      // =================================================
 
-            },
-          },
-        ]
+      navigation.replace(
+        'SOSAccepted',
+        response
       );
 
     } catch (error) {
 
       console.log(
-        "SOS accept error:",
+        'SOS accept error:',
         error?.response?.data || error
       );
 
       Alert.alert(
-        "Error",
+        'Error',
         error?.response?.data?.message ||
-        "Unable to accept SOS request."
+        'Unable to accept SOS request.'
       );
 
     } finally {
@@ -124,6 +124,11 @@ export default function SOSResponseScreen() {
 
     }
   };
+
+
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
 
@@ -144,6 +149,7 @@ export default function SOSResponseScreen() {
 
         </TouchableOpacity>
 
+
         <View style={styles.card}>
 
           <Text style={styles.title}>
@@ -153,6 +159,9 @@ export default function SOSResponseScreen() {
           <Text style={styles.subtitle}>
             A nearby patient urgently needs blood.
           </Text>
+
+
+          {/* REQUEST DETAILS */}
 
           <View style={styles.infoCard}>
 
@@ -183,6 +192,9 @@ export default function SOSResponseScreen() {
 
           </View>
 
+
+          {/* MESSAGE */}
+
           <View style={styles.messageBox}>
 
             <Text style={styles.messageTitle}>
@@ -190,16 +202,19 @@ export default function SOSResponseScreen() {
             </Text>
 
             <Text style={styles.message}>
-              {message || "No additional message."}
+              {message || 'No additional message.'}
             </Text>
 
           </View>
+
+
+          {/* CALL */}
 
           <TouchableOpacity
             style={styles.callButton}
             onPress={() =>
               Alert.alert(
-                "Call",
+                'Call',
                 `Patient phone: ${phone}`
               )
             }
@@ -211,12 +226,15 @@ export default function SOSResponseScreen() {
 
           </TouchableOpacity>
 
+
+          {/* DIRECTIONS */}
+
           <TouchableOpacity
             style={styles.directionButton}
             onPress={() =>
               Alert.alert(
-                "Directions",
-                "Google Maps integration coming soon."
+                'Directions',
+                'Google Maps integration coming soon.'
               )
             }
           >
@@ -226,6 +244,9 @@ export default function SOSResponseScreen() {
             </Text>
 
           </TouchableOpacity>
+
+
+          {/* ACCEPT */}
 
           <TouchableOpacity
             style={[
@@ -239,7 +260,7 @@ export default function SOSResponseScreen() {
             <Text style={styles.buttonText}>
 
               {loading
-                ? "Accepting..."
+                ? 'Accepting...'
                 : "❤️ I'm Coming to Donate"}
 
             </Text>
@@ -254,6 +275,11 @@ export default function SOSResponseScreen() {
 
   );
 }
+
+
+// =====================================================
+// INFO ROW
+// =====================================================
 
 function InfoRow({ label, value }) {
 
@@ -274,6 +300,11 @@ function InfoRow({ label, value }) {
   );
 
 }
+
+
+// =====================================================
+// STYLES
+// =====================================================
 
 const styles = StyleSheet.create({
 

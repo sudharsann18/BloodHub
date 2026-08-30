@@ -240,6 +240,23 @@ export const getAcceptedSOS = async (token) => {
 
   return response.data;
 };
+// =====================================================
+// SOS - GET SINGLE REQUEST
+// =====================================================
+
+export const getSOSById = async (id, token) => {
+
+  const response = await API.get(
+    `/sos/${id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
 
 
 // =====================================================

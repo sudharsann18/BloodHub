@@ -85,4 +85,15 @@ public class SOSController {
 
         return sosService.getAcceptedSOS(token);
     }
+    // ==========================================
+// GET SINGLE SOS BY ID
+// ==========================================
+
+    @GetMapping("/{id}")
+    public SOSResponseDTO getSOSById(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+
+        return sosService.getSOSById(id, token);
+    }
 }

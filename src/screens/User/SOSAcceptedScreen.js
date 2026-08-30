@@ -1,53 +1,98 @@
 import React from 'react';
+
 import {
   SafeAreaView,
-  StyleSheet,
   View,
+  Text,
+  StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  Alert,
+  Linking,
 } from 'react-native';
-import { Text } from 'react-native-paper';
-import { useNavigation, useRoute } from '@react-navigation/native';
 
-import { useSOS } from '../../context/SOSContext';
+import {
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 
 import { colors } from '../../constants/colors';
+
 import {
-  spacing,
   borderRadius,
   shadows,
+  spacing,
 } from '../../constants/theme';
 
 export default function SOSAcceptedScreen() {
+
   const navigation = useNavigation();
   const route = useRoute();
-
-  const { clearSOS } = useSOS();
 
   const {
     patientName = '',
     bloodGroup = '',
     hospital = '',
     units = '',
-    distance = '',
     phone = '',
   } = route.params || {};
 
-  const goHome = () => {
-    clearSOS();
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Home' }],
-    });
+  // =====================================================
+  // CALL PATIENT
+  // =====================================================
+
+  const callPatient = () => {
+
+    if (!phone) {
+
+      Alert.alert(
+        'Phone unavailable',
+        'Patient phone number is not available.'
+      );
+
+      return;
+    }
+
+    Linking.openURL(`tel:${phone}`);
   };
 
+
+  // =====================================================
+  // OPEN MAPS
+  // =====================================================
+
+  const openMaps = () => {
+
+    const query =
+      encodeURIComponent(hospital || 'Current Hospital');
+
+    Linking.openURL(
+      `https://www.google.com/maps/search/?api=1&query=${query}`
+    );
+  };
+
+
+  // =====================================================
+  // GO HOME
+  // =====================================================
+
+  const goHome = () => {
+
+    // Home is the parent Bottom Tab.
+    navigation.getParent()?.navigate('Home');
+  };
+
+
+  // =====================================================
+  // UI
+  // =====================================================
+
   return (
+
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
+
+      <View style={styles.container}>
+
         <View style={styles.card}>
 
           <Text style={styles.icon}>
@@ -59,8 +104,12 @@ export default function SOSAcceptedScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            You have successfully accepted this emergency blood request.
+            You have successfully accepted this
+            emergency blood request.
           </Text>
+
+
+          {/* DETAILS */}
 
           <View style={styles.infoCard}>
 
@@ -85,56 +134,91 @@ export default function SOSAcceptedScreen() {
             />
 
             <InfoRow
-              label="Distance"
-              value={distance}
-            />
-
-            <InfoRow
               label="Phone"
               value={phone}
             />
 
           </View>
 
+
+          {/* CALL */}
+
           <TouchableOpacity
             style={styles.callButton}
+            onPress={callPatient}
           >
+
             <Text style={styles.buttonText}>
               📞 Call Patient
             </Text>
+
           </TouchableOpacity>
+
+
+          {/* MAP */}
 
           <TouchableOpacity
             style={styles.mapButton}
+            onPress={openMaps}
           >
+
             <Text style={styles.buttonText}>
               📍 Open Maps
             </Text>
+
           </TouchableOpacity>
+
+
+          {/* HOME */}
 
           <TouchableOpacity
             style={styles.homeButton}
             onPress={goHome}
           >
+
             <Text style={styles.buttonText}>
               🏠 Back Home
             </Text>
+
           </TouchableOpacity>
 
         </View>
-      </ScrollView>
+
+      </View>
+
     </SafeAreaView>
+
   );
 }
 
+
+// =====================================================
+// INFO ROW
+// =====================================================
+
 function InfoRow({ label, value }) {
+
   return (
+
     <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+
+      <Text style={styles.label}>
+        {label}
+      </Text>
+
+      <Text style={styles.value}>
+        {value || '-'}
+      </Text>
+
     </View>
+
   );
 }
+
+
+// =====================================================
+// STYLES
+// =====================================================
 
 const styles = StyleSheet.create({
 
@@ -144,7 +228,7 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    flexGrow: 1,
+    flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },

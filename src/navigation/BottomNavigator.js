@@ -16,6 +16,7 @@ import SOSDetailsScreen from '../screens/User/SOSDetailsScreen';
 import SOSResponseScreen from '../screens/User/SOSResponseScreen';
 import NotificationScreen from '../screens/User/NotificationScreen';
 import ProfileScreen from '../screens/User/ProfileScreen';
+import SOSStatusScreen from '../screens/User/SOSStatusScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -52,6 +53,11 @@ const HomeStack = () => {
         name="SOSDetails"
         component={SOSDetailsScreen}
       />
+
+      <Stack.Screen
+  name="SOSStatus"
+  component={SOSStatusScreen}
+/>
       <Stack.Screen
   name="ReserveBlood"
   component={ReserveBloodScreen}
@@ -89,9 +95,9 @@ export default function BottomNavigator() {
           height: 65,
           paddingBottom: 8,
           paddingTop: 6,
-          backgroundColor: '#fff',
+          backgroundColor: '#af4343',
           borderTopWidth: 1,
-          borderTopColor: '#eee',
+          borderTopColor: '#ce3838',
         },
 
         tabBarIcon: ({ color, size }) => {
