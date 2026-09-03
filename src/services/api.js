@@ -11,13 +11,31 @@ const API = axios.create({
 // =====================================================
 
 export const getInventory = async () => {
-  const response = await API.get("/inventory");
+  const token = await AsyncStorage.getItem("token");
+
+  const response = await API.get("/inventory/my", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   return response.data;
 };
 
-export const updateInventory = async (id, units) => {
+export const updateInventory = async (bloodGroup, units) => {
+  const token = await AsyncStorage.getItem("token");
+
   const response = await API.put(
-    `/inventory/${id}?units=${units}`
+    "/inventory",
+    {
+      bloodGroup,
+      units: Number(units),
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
 
   return response.data;
