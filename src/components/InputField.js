@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextInput } from 'react-native-paper';
-import { colors } from '../constants/colors';
+import { colors } from '../theme/colors';
 import { borderRadius, spacing } from '../constants/theme';
 
 const InputField = ({
@@ -27,17 +27,26 @@ const InputField = ({
     keyboardType={keyboardType}
     left={left}
     right={right}
-    outlineColor={colors.lightRed}
-    activeOutlineColor={colors.primaryRed}
-    textColor={colors.black}
-    selectionColor={colors.primaryRed}
-    style={[{ backgroundColor: colors.white, borderRadius: borderRadius.md }, style]}
+    outlineColor={colors.border}
+    activeOutlineColor={colors.red}
+    textColor={colors.text}
+    placeholderTextColor={colors.muted}
+    selectionColor={colors.red}
+    style={[
+      {
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.md,
+      },
+      style,
+    ]}
     contentStyle={{ paddingVertical: spacing.sm }}
     theme={{
       colors: {
-        primary: colors.primaryRed,
-        placeholder: colors.gray,
-        text: colors.black,
+        primary: colors.red,
+        placeholder: colors.muted,
+        text: colors.text,
+        background: colors.surface,
+        onSurfaceVariant: colors.text,
       },
     }}
     {...props}

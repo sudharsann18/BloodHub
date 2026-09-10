@@ -1,121 +1,27 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
-import { Text, Card } from "react-native-paper";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import API from "../../services/api";
+import React, { useCallback, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import API from '../../services/api';
+import AppHeader from '../../components/common/AppHeader';
+import AppCard from '../../components/common/AppCard';
+import AppButton from '../../components/common/AppButton';
+import InfoRow from '../../components/common/InfoRow';
+import LoadingView from '../../components/common/LoadingView';
+import EmptyState from '../../components/common/EmptyState';
+import { colors, spacing, typography } from '../../theme/theme';
 
 export default function ProfileScreen() {
-
+  const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-
-    try {
-
-      const token = await AsyncStorage.getItem("token");
-
-      const response = await API.get("/user/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setUser(response.data);
-
-    } catch (error) {
-      console.log(error);
-      alert("Failed to load profile");
-    } finally {
-      setLoading(false);
-    }
-
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#D32F2F" />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-
-      <Text style={styles.heading}>
-        My Profile
-      </Text>
-
-      <Card style={styles.card}>
-        <Card.Content>
-
-          <Text style={styles.label}>Full Name</Text>
-          <Text style={styles.value}>{user.fullName}</Text>
-
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{user.email}</Text>
-
-          <Text style={styles.label}>Phone</Text>
-          <Text style={styles.value}>{user.phone}</Text>
-
-          <Text style={styles.label}>Role</Text>
-          <Text style={styles.value}>{user.role}</Text>
-
-        </Card.Content>
-      </Card>
-
-    </View>
-  );
-
+  const [error, setError] = useState(false);
+  const load = useCallback(async () => { setLoading(true); setError(false); try { const token = await AsyncStorage.getItem('token'); const response = await API.get('/user/profile', { headers: { Authorization: `Bearer ${token}` } }); setUser(response.data); } catch { setError(true); } finally { setLoading(false); } }, []);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+  const logout = async () => { await AsyncStorage.multiRemove(['token', 'role', 'name']); const rootNavigation = navigation.getParent()?.getParent() || navigation.getParent(); rootNavigation?.reset({ index: 0, routes: [{ name: 'Auth' }] }); };
+  return <SafeAreaView style={styles.safeArea}><ScrollView contentContainerStyle={styles.container}><AppHeader title="Profile" subtitle="Your BloodHub account" />{loading ? <LoadingView label="Loading profile..." /> : error ? <AppCard><EmptyState title="Unable to load profile" message="Please try again." /><AppButton variant="secondary" onPress={load}>Try again</AppButton></AppCard> : !user ? <AppCard><EmptyState title="Profile unavailable" /></AppCard> : <><AppCard style={styles.identity}><View style={styles.avatar}><MaterialCommunityIcons name="account-heart-outline" size={31} color={colors.red} /></View><View><Text style={styles.name}>{user.fullName || 'Not available'}</Text><Text style={styles.role}>{String(user.role || 'Account').replace('_', ' ')}</Text></View></AppCard><AppCard><Text style={styles.section}>Account information</Text><InfoRow label="Full name" value={user.fullName} /><InfoRow label="Email" value={user.email} /><InfoRow label="Phone" value={user.phone} /><InfoRow label="Role" value={user.role} /></AppCard><AppButton variant="danger" icon="logout" onPress={logout} style={styles.logout}>Log out</AppButton></>}</ScrollView></SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#F5F5F5",
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  heading: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#D32F2F",
-  },
-
-  card: {
-    borderRadius: 12,
-    elevation: 4,
-    paddingVertical: 10,
-  },
-
-  label: {
-    fontSize: 14,
-    color: "gray",
-    marginTop: 10,
-  },
-
-  value: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-
-});
+const styles = StyleSheet.create({ safeArea: { flex: 1, backgroundColor: colors.canvas }, container: { padding: spacing.lg, paddingBottom: spacing.xxl }, identity: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }, avatar: { width: 62, height: 62, borderRadius: 31, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }, name: { ...typography.title, color: colors.navy }, role: { ...typography.caption, color: colors.muted, marginTop: spacing.xs }, section: { ...typography.heading, color: colors.navy, marginBottom: spacing.sm }, themeCard: { marginTop: spacing.md, marginBottom: spacing.md }, logout: { marginTop: spacing.lg } });

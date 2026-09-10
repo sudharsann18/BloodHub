@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import PrimaryButton from '../../components/PrimaryButton';
-import BloodGroupDropdown from '../../components/BloodGroupDropdown';
+import BloodGroupSelector from '../../components/common/BloodGroupSelector';
 import InputField from '../../components/InputField';
 
 import { createSOS } from '../../services/api';
@@ -30,8 +30,9 @@ import {
 export default function SOSScreen() {
   const navigation = useNavigation();
 
-  const [selectedGroup, setSelectedGroup] = useState('A+');
-  const [units, setUnits] = useState('2');
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [units, setUnits] = useState('');
+  const [hospital, setHospital] = useState('');
   const [message, setMessage] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,11 @@ export default function SOSScreen() {
         'Error',
         'Please enter valid units.'
       );
+      return;
+    }
+
+    if (!hospital.trim()) {
+      Alert.alert('Error', 'Please enter the hospital or care location.');
       return;
     }
 
@@ -82,7 +88,7 @@ export default function SOSScreen() {
         bloodGroup: selectedGroup,
         units: Number(units),
         message: message.trim(),
-        hospital: 'Current Hospital',
+        hospital: hospital.trim(),
       };
 
       console.log('=================================');
@@ -195,11 +201,19 @@ export default function SOSScreen() {
 
           {/* BLOOD GROUP */}
 
-          <BloodGroupDropdown
+          <BloodGroupSelector
             label="Blood Group"
             value={selectedGroup}
             onSelect={setSelectedGroup}
             options={bloodGroups}
+          />
+
+          <InputField
+            label="Hospital or Care Location"
+            value={hospital}
+            onChangeText={setHospital}
+            placeholder="Enter the destination hospital"
+            style={styles.input}
           />
 
           {/* UNITS */}

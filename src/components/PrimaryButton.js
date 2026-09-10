@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from 'react-native-paper';
-import { colors } from '../constants/colors';
+import { colors } from '../theme/colors';
 import { borderRadius, spacing } from '../constants/theme';
 
 const PrimaryButton = ({
@@ -19,8 +19,8 @@ const PrimaryButton = ({
     disabled={disabled}
     loading={loading}
     icon={icon}
-    buttonColor={mode === 'contained' ? colors.primaryRed : colors.white}
-    textColor={mode === 'contained' ? colors.white : colors.primaryRed}
+    buttonColor={mode === 'contained' ? colors.red : colors.surface}
+    textColor={mode === 'contained' ? colors.white : colors.red}
     style={[{ borderRadius: borderRadius.md, overflow: 'hidden' }, style]}
     contentStyle={{ paddingVertical: spacing.sm }}
     {...props}

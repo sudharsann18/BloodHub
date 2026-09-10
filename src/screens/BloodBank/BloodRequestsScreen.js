@@ -1,431 +1,104 @@
 import React, { useEffect, useState } from 'react';
+import { SafeAreaView, StyleSheet, View, Alert } from 'react-native';
+import { Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import {
-  SafeAreaView,
-  StyleSheet,
-  FlatList,
-  View,
-  Alert,
-} from 'react-native';
-import {
-  Card,
-  Text,
-  Button,
-  ActivityIndicator,
-} from 'react-native-paper';
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import api from '../../services/api';
+import AppHeader from '../../components/common/AppHeader';
+import AppCard from '../../components/common/AppCard';
+import AppButton from '../../components/common/AppButton';
+import StatusBadge from '../../components/common/StatusBadge';
+import LoadingView from '../../components/common/LoadingView';
+import EmptyState from '../../components/common/EmptyState';
+import { getAllRequests, acceptBloodRequest } from '../../services/api';
+import { colors, spacing, typography } from '../../theme/theme';
 
 export default function BloodRequestsScreen() {
-
   const navigation = useNavigation();
-
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // =========================
-  // FETCH BLOOD BANK REQUESTS
-  // =========================
-
-  const fetchRequests = async () => {
-
+  const loadData = async () => {
     try {
-
-      const token = await AsyncStorage.getItem('token');
-
-      if (!token) {
-        console.log('No authentication token found');
-        setRequests([]);
-        return;
-      }
-
-      const response = await api.get('/request/all', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log('Blood bank requests:', response.data);
-
-      // Show only pending requests
-      const pendingRequests = response.data.filter(
-        request => request.status === 'REQUESTED'
-      );
-
-      setRequests(pendingRequests);
-
-    } catch (error) {
-
-      console.log(
-        'Failed to fetch blood requests:',
-        error?.response?.data || error
-      );
-
+      setLoading(true);
+      const requestData = await getAllRequests();
+      setRequests(Array.isArray(requestData) ? requestData.filter((item) => item.status === 'REQUESTED') : []);
+    } catch {
       setRequests([]);
-
+      Alert.alert('Unable to load requests', 'Please try again.');
     } finally {
-
       setLoading(false);
-
     }
   };
 
+  useEffect(() => { loadData(); }, []);
 
-  // =========================
-  // INITIAL LOAD + AUTO REFRESH
-  // =========================
-
-  useEffect(() => {
-
-    fetchRequests();
-
-    const interval = setInterval(() => {
-      fetchRequests();
-    }, 5000);
-
-    return () => clearInterval(interval);
-
-  }, []);
-
-
-  // =========================
-  // ACCEPT REQUEST
-  // =========================
-
-  const acceptRequest = async (id) => {
-
+  const handleAccept = async (id) => {
     try {
-
-      const token = await AsyncStorage.getItem('token');
-
-      if (!token) {
-        Alert.alert(
-          'Authentication Error',
-          'Please login again.'
-        );
-        return;
-      }
-
-      await api.put(
-        `/request/${id}/accept`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      Alert.alert(
-        'Success',
-        'Blood request accepted successfully.'
-      );
-
-      // Refresh requests
-      fetchRequests();
-
+      await acceptBloodRequest(id);
+      Alert.alert('Success', 'Emergency request accepted.');
+      await loadData();
     } catch (error) {
-
-      console.log(
-        'Failed to accept request:',
-        error?.response?.data || error
-      );
-
-      Alert.alert(
-        'Error',
-        error?.response?.data?.message ||
-        'Failed to accept request.'
-      );
+      Alert.alert('Unable to accept request', error?.response?.data?.message || 'Please try again.');
     }
   };
 
-
-  // =========================
-  // REQUEST CARD
-  // =========================
-
-  const renderItem = ({ item }) => (
-
-    <Card style={styles.card}>
-
-      <Card.Content>
-
-        <Text style={styles.patient}>
-          👤 {item.patientName}
-        </Text>
-
-        <InfoRow
-          label="Blood Group"
-          value={item.bloodGroup}
-        />
-
-        <InfoRow
-          label="Units"
-          value={item.units}
-        />
-
-        <InfoRow
-          label="Hospital"
-          value={item.hospital}
-        />
-
-        <InfoRow
-          label="Location"
-          value={item.location}
-        />
-
-        <InfoRow
-          label="Contact"
-          value={item.contactNumber}
-        />
-
-        <InfoRow
-          label="Urgency"
-          value={item.urgency}
-        />
-
-        <InfoRow
-          label="Status"
-          value={item.status}
-        />
-
-        <Button
-          mode="contained"
-          style={styles.button}
-          onPress={() => acceptRequest(item.id)}
-        >
-          Accept Request
-        </Button>
-
-      </Card.Content>
-
-    </Card>
+  const renderEmergencyItem = (item) => (
+    <AppCard key={`request-${item.id}`} style={styles.card} accent={colors.red}>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.kind}>Emergency request</Text>
+          <Text style={styles.patientName}>{item.patientName || 'Patient not available'}</Text>
+        </View>
+        <StatusBadge status={item.status || 'Pending'} />
+      </View>
+      <View style={styles.infoList}>
+        <Text style={styles.info}><Text style={styles.label}>Blood group:</Text> {item.bloodGroup || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Units:</Text> {item.units ?? 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Hospital:</Text> {item.hospital || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Requester:</Text> {item.requestedBy || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Status:</Text> {item.status || 'Requested'}</Text>
+      </View>
+      {item.status === 'REQUESTED' ? (
+        <AppButton icon="check-circle-outline" onPress={() => handleAccept(item.id)}>Accept request</AppButton>
+      ) : (
+        <AppButton variant="secondary" icon="information-outline" onPress={() => Alert.alert('Request details', `${item.patientName || 'Patient'} • ${item.bloodGroup || 'Blood group'} • ${item.units ?? '0'} units`)}>View details</AppButton>
+      )}
+    </AppCard>
   );
 
-
-  // =========================
-  // LOADING
-  // =========================
-
-  if (loading) {
-
-    return (
-
-      <SafeAreaView style={styles.loader}>
-
-        <ActivityIndicator
-          size="large"
-        />
-
-        <Text style={styles.loadingText}>
-          Loading blood requests...
-        </Text>
-
-      </SafeAreaView>
-
-    );
-  }
-
-
-  // =========================
-  // SCREEN
-  // =========================
-
   return (
+    <SafeAreaView style={styles.safeArea}>
+      <AppHeader title="Requests" subtitle="Review pending emergency blood requests" onBack={() => navigation.goBack()} />
+      <View style={styles.container}>
+        <View style={styles.tabs}>
+          <AppButton variant="primary" style={styles.tabButton}>Emergency</AppButton>
+        </View>
 
-    <SafeAreaView style={styles.container}>
-
-      <Text style={styles.title}>
-        🩸 Pending Blood Requests
-      </Text>
-
-      <Text style={styles.subtitle}>
-        Requests assigned to this blood bank
-      </Text>
-
-      <Button
-        mode="text"
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-      >
-        ← Back
-      </Button>
-
-      <FlatList
-        data={requests}
-        keyExtractor={(item) =>
-          item.id.toString()
-        }
-        renderItem={renderItem}
-        contentContainerStyle={
-          requests.length === 0
-            ? styles.emptyList
-            : styles.list
-        }
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-
-          <View style={styles.empty}>
-
-            <Text style={styles.emptyIcon}>
-              🩸
-            </Text>
-
-            <Text style={styles.emptyTitle}>
-              No Pending Requests
-            </Text>
-
-            <Text style={styles.emptyText}>
-              There are currently no pending blood requests
-              for this blood bank.
-            </Text>
-
+        {loading ? (
+          <LoadingView label="Loading requests..." />
+        ) : requests.length === 0 ? (
+          <AppCard>
+            <EmptyState title="No emergency requests" message="There are no active emergency blood requests right now." />
+          </AppCard>
+        ) : (
+          <View>
+            {requests.map(renderEmergencyItem)}
           </View>
-
-        }
-      />
-
+        )}
+      </View>
     </SafeAreaView>
-
   );
 }
-
-
-// =========================
-// INFO ROW
-// =========================
-
-function InfoRow({ label, value }) {
-
-  return (
-
-    <View style={styles.row}>
-
-      <Text style={styles.label}>
-        {label}
-      </Text>
-
-      <Text style={styles.value}>
-        {value}
-      </Text>
-
-    </View>
-
-  );
-}
-
-
-// =========================
-// STYLES
-// =========================
 
 const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    padding: 15,
-  },
-
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-
-  loadingText: {
-    marginTop: 12,
-    color: '#666',
-  },
-
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#C62828',
-    marginBottom: 5,
-  },
-
-  subtitle: {
-    color: '#666',
-    marginBottom: 10,
-  },
-
-  backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-  },
-
-  list: {
-    paddingBottom: 30,
-  },
-
-  emptyList: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 100,
-  },
-
-  card: {
-    marginBottom: 15,
-    borderRadius: 12,
-    elevation: 4,
-    backgroundColor: '#FFFFFF',
-  },
-
-  patient: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#C62828',
-  },
-
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 5,
-  },
-
-  label: {
-    color: '#666',
-    fontWeight: '600',
-    flex: 1,
-  },
-
-  value: {
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'right',
-  },
-
-  button: {
-    marginTop: 15,
-    backgroundColor: '#C62828',
-  },
-
-  empty: {
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-
-  emptyIcon: {
-    fontSize: 50,
-    marginBottom: 15,
-  },
-
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-
-  emptyText: {
-    textAlign: 'center',
-    color: '#777',
-    lineHeight: 21,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  container: { flex: 1, padding: spacing.lg },
+  tabs: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  tabButton: { flex: 1 },
+  card: { marginBottom: spacing.md },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
+  kind: { ...typography.label, color: colors.muted, textTransform: 'uppercase' },
+  patientName: { ...typography.heading, color: colors.navy, marginTop: 4 },
+  infoList: { marginBottom: spacing.md },
+  info: { ...typography.caption, color: colors.text, marginBottom: 6 },
+  label: { color: colors.muted, fontWeight: '700' },
 });

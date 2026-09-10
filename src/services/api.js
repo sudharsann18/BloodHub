@@ -142,6 +142,26 @@ export const getAllRequests = async () => {
   return response.data;
 };
 
+export const acceptBloodRequest = async (id) => {
+  const token = await AsyncStorage.getItem('token');
+  const response = await API.put(
+    `/request/${id}/accept`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+};
+
+export const completeBloodRequest = async (id) => {
+  const token = await AsyncStorage.getItem('token');
+  const response = await API.put(
+    `/request/${id}/complete`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+};
+
 
 // =====================================================
 // SOS - CREATE / BROADCAST

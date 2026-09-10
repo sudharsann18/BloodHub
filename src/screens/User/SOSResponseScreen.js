@@ -29,6 +29,7 @@ import {
   shadows,
   spacing,
 } from '../../constants/theme';
+import { openMapLocation, openPhoneDialer } from '../../utils/deviceActions';
 
 export default function SOSResponseScreen() {
 
@@ -212,12 +213,7 @@ export default function SOSResponseScreen() {
 
           <TouchableOpacity
             style={styles.callButton}
-            onPress={() =>
-              Alert.alert(
-                'Call',
-                `Patient phone: ${phone}`
-              )
-            }
+            onPress={() => openPhoneDialer(phone, 'Patient')}
           >
 
             <Text style={styles.buttonText}>
@@ -231,12 +227,12 @@ export default function SOSResponseScreen() {
 
           <TouchableOpacity
             style={styles.directionButton}
-            onPress={() =>
-              Alert.alert(
-                'Directions',
-                'Google Maps integration coming soon.'
-              )
-            }
+            onPress={() => openMapLocation({
+              latitude: route.params?.latitude,
+              longitude: route.params?.longitude,
+              address: hospital,
+              label: 'Hospital location',
+            })}
           >
 
             <Text style={styles.buttonText}>
@@ -257,7 +253,7 @@ export default function SOSResponseScreen() {
             disabled={loading}
           >
 
-            <Text style={styles.buttonText}>
+            <Text style={styles.acceptButtonText}>
 
               {loading
                 ? 'Accepting...'
@@ -410,7 +406,9 @@ const styles = StyleSheet.create({
 
   acceptButton: {
     marginTop: spacing.md,
-    backgroundColor: colors.primaryRed,
+    backgroundColor: colors.red,
+    borderWidth: 1,
+    borderColor: colors.redDark,
     paddingVertical: 18,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
@@ -418,6 +416,12 @@ const styles = StyleSheet.create({
 
   disabledButton: {
     opacity: 0.6,
+  },
+
+  acceptButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
   },
 
   buttonText: {

@@ -6,8 +6,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
-  Linking,
 } from 'react-native';
 
 import {
@@ -22,6 +20,7 @@ import {
   shadows,
   spacing,
 } from '../../constants/theme';
+import { openMapLocation, openPhoneDialer } from '../../utils/deviceActions';
 
 export default function SOSAcceptedScreen() {
 
@@ -41,35 +40,19 @@ export default function SOSAcceptedScreen() {
   // CALL PATIENT
   // =====================================================
 
-  const callPatient = () => {
-
-    if (!phone) {
-
-      Alert.alert(
-        'Phone unavailable',
-        'Patient phone number is not available.'
-      );
-
-      return;
-    }
-
-    Linking.openURL(`tel:${phone}`);
-  };
+  const callPatient = () => openPhoneDialer(phone, 'Patient');
 
 
   // =====================================================
   // OPEN MAPS
   // =====================================================
 
-  const openMaps = () => {
-
-    const query =
-      encodeURIComponent(hospital || 'Current Hospital');
-
-    Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${query}`
-    );
-  };
+  const openMaps = () => openMapLocation({
+    latitude: route.params?.latitude,
+    longitude: route.params?.longitude,
+    address: hospital,
+    label: 'Hospital location',
+  });
 
 
   // =====================================================
@@ -78,8 +61,7 @@ export default function SOSAcceptedScreen() {
 
   const goHome = () => {
 
-    // Home is the parent Bottom Tab.
-    navigation.getParent()?.navigate('Home');
+    navigation.popToTop();
   };
 
 
@@ -302,7 +284,7 @@ const styles = StyleSheet.create({
   },
 
   homeButton: {
-    backgroundColor: colors.primaryRed,
+    backgroundColor: colors.red,
     padding: 16,
     borderRadius: borderRadius.lg,
     marginTop: spacing.md,

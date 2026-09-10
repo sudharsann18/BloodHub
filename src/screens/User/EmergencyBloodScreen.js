@@ -30,10 +30,10 @@ export default function EmergencyBloodScreen() {
   const route = useRoute();
 
   const {
-    hospital = 'Apollo Blood Bank',
+    hospital = '',
     bloodBankId,
-    bloodGroup = 'A+',
-    units = '2',
+    bloodGroup = '',
+    units = '',
   } = route.params || {};
 
   const [patientName, setPatientName] = useState('');

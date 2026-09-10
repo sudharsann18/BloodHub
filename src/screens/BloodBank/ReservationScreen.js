@@ -1,285 +1,96 @@
-import React, { useEffect, useState } from "react";
-import {
-  SafeAreaView,
-  StyleSheet,
-  FlatList,
-  View,
-  Alert,
-} from "react-native";
-import { Card, Text, Button, ActivityIndicator } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
-
-import {
-  getReservations,
-  approveReservation,
-} from "../../services/api";
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View, Alert } from 'react-native';
+import { Text } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import AppHeader from '../../components/common/AppHeader';
+import AppCard from '../../components/common/AppCard';
+import AppButton from '../../components/common/AppButton';
+import StatusBadge from '../../components/common/StatusBadge';
+import LoadingView from '../../components/common/LoadingView';
+import EmptyState from '../../components/common/EmptyState';
+import { getReservations, approveReservation } from '../../services/api';
+import { colors, spacing, typography } from '../../theme/theme';
 
 export default function ReservationScreen() {
   const navigation = useNavigation();
-
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadReservations = async () => {
     try {
       setLoading(true);
-
       const data = await getReservations();
-
-      console.log("BLOOD BANK RESERVATIONS:", data);
-
-      setReservations(Array.isArray(data) ? data : []);
+      setReservations(Array.isArray(data) ? data.filter((item) => item.status === 'REQUESTED') : []);
     } catch (error) {
-      console.log(
-        "Reservation loading error:",
-        error?.response?.data || error
-      );
-
-      Alert.alert(
-        "Error",
-        "Failed to load blood bank reservations"
-      );
+      setReservations([]);
+      Alert.alert('Unable to load reservations', 'Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadReservations();
-  }, []);
+  useEffect(() => { loadReservations(); }, []);
 
   const approve = async (id) => {
     try {
       await approveReservation(id);
-
-      Alert.alert(
-        "Success",
-        "Reservation approved successfully"
-      );
-
+      Alert.alert('Success', 'Reservation approved successfully.');
       await loadReservations();
-
     } catch (error) {
-      console.log(
-        "Approve reservation error:",
-        error?.response?.data || error
-      );
-
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message ||
-          "Unable to approve reservation"
-      );
+      Alert.alert('Unable to approve reservation', error?.response?.data?.message || 'Please try again.');
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loader}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>
-          Loading reservations...
-        </Text>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-
-      <Button
-        mode="text"
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-      >
-        ← Back
-      </Button>
-
-      <Text style={styles.title}>
-        📅 Blood Reservations
-      </Text>
-
-      <Text style={styles.subtitle}>
-        Reservations received by this blood bank
-      </Text>
-
-      <FlatList
-        data={reservations}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              No reservations found
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <Card.Content>
-
-              <Text style={styles.patient}>
-                👤 {item.patientName}
-              </Text>
-
-              <InfoRow
-                label="Blood Group"
-                value={item.bloodGroup}
-              />
-
-              <InfoRow
-                label="Units"
-                value={String(item.units)}
-              />
-
-              <InfoRow
-                label="Hospital"
-                value={item.hospital}
-              />
-
-              <InfoRow
-                label="Location"
-                value={item.location}
-              />
-
-              <InfoRow
-                label="Contact"
-                value={item.contactNumber}
-              />
-
-              <InfoRow
-                label="Date"
-                value={item.reservationDate}
-              />
-
-              <InfoRow
-                label="Time"
-                value={item.reservationTime}
-              />
-
-              <InfoRow
-                label="Status"
-                value={item.status}
-              />
-
-              {item.status === "REQUESTED" && (
-                <Button
-                  mode="contained"
-                  style={styles.approveButton}
-                  onPress={() => approve(item.id)}
-                >
-                  Approve Reservation
-                </Button>
-              )}
-
-            </Card.Content>
-          </Card>
+    <SafeAreaView style={styles.safeArea}>
+      <AppHeader title="Reservations" subtitle="Reservation requests for this blood bank" onBack={() => navigation.goBack()} />
+      <View style={styles.container}>
+        {loading ? (
+          <LoadingView label="Loading reservations..." />
+        ) : reservations.length === 0 ? (
+          <AppCard><EmptyState title="No reservations" message="There are no blood reservation requests right now." /></AppCard>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContent}>
+            {reservations.map((item) => (
+              <AppCard key={`reservation-${item.id}`} style={styles.card} accent={colors.navy}>
+                <View style={styles.headerRow}>
+                  <View>
+                    <Text style={styles.kind}>Blood reservation</Text>
+                    <Text style={styles.patientName}>{item.patientName || 'Patient not available'}</Text>
+                  </View>
+                  <StatusBadge status={item.status || 'Pending'} />
+                </View>
+                <View style={styles.infoList}>
+                  <Text style={styles.info}><Text style={styles.label}>Blood group:</Text> {item.bloodGroup || 'Not available'}</Text>
+                  <Text style={styles.info}><Text style={styles.label}>Units:</Text> {item.units ?? 'Not available'}</Text>
+                  <Text style={styles.info}><Text style={styles.label}>Hospital:</Text> {item.hospital || 'Not available'}</Text>
+                  <Text style={styles.info}><Text style={styles.label}>Date:</Text> {item.reservationDate || 'Not available'}</Text>
+                  <Text style={styles.info}><Text style={styles.label}>Time:</Text> {item.reservationTime || 'Not available'}</Text>
+                  <Text style={styles.info}><Text style={styles.label}>Status:</Text> {item.status || 'Requested'}</Text>
+                </View>
+                {item.status === 'REQUESTED' ? (
+                  <AppButton icon="check" onPress={() => approve(item.id)}>Approve reservation</AppButton>
+                ) : (
+                  <AppButton variant="secondary" icon="information-outline" onPress={() => Alert.alert('Reservation details', `${item.patientName || 'Patient'} • ${item.bloodGroup || 'Blood group'} • ${item.units ?? '0'} units`)}>View details</AppButton>
+                )}
+              </AppCard>
+            ))}
+          </ScrollView>
         )}
-      />
-
+      </View>
     </SafeAreaView>
   );
 }
 
-function InfoRow({ label, value }) {
-  return (
-    <View style={styles.row}>
-
-      <Text style={styles.label}>
-        {label}
-      </Text>
-
-      <Text style={styles.value}>
-        {value}
-      </Text>
-
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-    padding: 15,
-  },
-
-  loader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F5F5F5",
-  },
-
-  loadingText: {
-    marginTop: 10,
-    color: "#666",
-  },
-
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 5,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#C62828",
-  },
-
-  subtitle: {
-    color: "#666",
-    marginBottom: 15,
-  },
-
-  list: {
-    paddingBottom: 30,
-  },
-
-  card: {
-    marginBottom: 15,
-    borderRadius: 12,
-    elevation: 4,
-  },
-
-  patient: {
-    fontSize: 21,
-    fontWeight: "bold",
-    color: "#C62828",
-    marginBottom: 15,
-  },
-
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 5,
-  },
-
-  label: {
-    color: "#666",
-    fontWeight: "600",
-  },
-
-  value: {
-    fontWeight: "700",
-    maxWidth: "65%",
-    textAlign: "right",
-  },
-
-  approveButton: {
-    marginTop: 15,
-    backgroundColor: "#C62828",
-  },
-
-  empty: {
-    marginTop: 60,
-    alignItems: "center",
-  },
-
-  emptyText: {
-    fontSize: 18,
-    color: "#666",
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  container: { flex: 1, padding: spacing.lg },
+  listContent: { paddingBottom: spacing.xxl },
+  card: { marginBottom: spacing.md },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
+  kind: { ...typography.label, color: colors.muted, textTransform: 'uppercase' },
+  patientName: { ...typography.heading, color: colors.navy, marginTop: 4 },
+  infoList: { marginBottom: spacing.md },
+  info: { ...typography.caption, color: colors.text, marginBottom: 6 },
+  label: { color: colors.muted, fontWeight: '700' },
 });

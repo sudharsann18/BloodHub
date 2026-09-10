@@ -1,112 +1,99 @@
 import React from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { SafeAreaView, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import PrimaryButton from '../../components/PrimaryButton';
-import { colors } from '../../constants/colors';
-import {
-  borderRadius,
-  shadows,
-  spacing,
-} from '../../constants/theme';
+import { colors } from '../../theme/colors';
+import { spacing, borderRadius } from '../../constants/theme';
 
 export default function WelcomeScreen({ navigation }) {
   return (
-    <SafeAreaView style={styles.container}>
-
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
-
-        <View style={styles.logoCircle}>
-          <Text style={styles.logo}>🩸</Text>
+        <View style={styles.logoWrap}>
+          <Text style={styles.logoText}>🩸</Text>
         </View>
 
-        <Text style={styles.title}>
-          Blood Bank Live Radar
-        </Text>
-
+        <Text style={styles.brand}>BloodHub</Text>
+        <Text style={styles.title}>Blood Bank Live Radar</Text>
         <Text style={styles.subtitle}>
-          Find nearby blood banks, reserve blood,
-          request emergency delivery, and save lives.
+          Find nearby blood banks, respond to urgent requests, and support life-saving care.
         </Text>
-
       </View>
 
-      <View style={styles.bottomContainer}>
-
+      <View style={styles.actions}>
+        <PrimaryButton label="Login" onPress={() => navigation.navigate('Login')} />
         <PrimaryButton
-          label="Login"
-          onPress={() => navigation.navigate('Login')}
-        />
-
-        <PrimaryButton
-          label="Register"
+          label="Create an account"
           onPress={() => navigation.navigate('Register')}
-          style={styles.registerButton}
+          mode="outlined"
+          style={styles.secondaryButton}
         />
-
       </View>
-
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'space-between',
-    padding: spacing.xl,
+    backgroundColor: colors.canvas,
+    padding: spacing.lg,
+    justifyContent: 'center',
   },
-
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
   },
-
-  logoCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.lightRed,
-    justifyContent: 'center',
+  logoWrap: {
+    width: 120,
+    height: 120,
+    borderRadius: 36,
+    backgroundColor: colors.redSoft,
     alignItems: 'center',
-    ...shadows.medium,
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
-
-  logo: {
-    fontSize: 70,
+  logoText: {
+    fontSize: 58,
   },
-
-  title: {
+  brand: {
     fontSize: 30,
-    fontWeight: '700',
-    color: colors.primaryRed,
-    marginTop: spacing.xl,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: 0.5,
+  },
+  title: {
+    marginTop: spacing.sm,
+    fontSize: 16,
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
     textAlign: 'center',
   },
-
   subtitle: {
     marginTop: spacing.md,
     textAlign: 'center',
-    color: colors.gray,
+    color: colors.muted,
     lineHeight: 24,
     fontSize: 16,
-    paddingHorizontal: spacing.lg,
+    maxWidth: 420,
   },
-
-  bottomContainer: {
-    marginBottom: spacing.lg,
+  actions: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-
-  registerButton: {
-    marginTop: spacing.md,
-    backgroundColor: colors.black,
+  secondaryButton: {
+    marginTop: 0,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-
 });

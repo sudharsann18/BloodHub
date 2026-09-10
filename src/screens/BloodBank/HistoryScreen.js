@@ -1,253 +1,115 @@
-import React, { useEffect, useState } from "react";
-import {
-  SafeAreaView,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-} from "react-native";
-import { Card, Text, Button } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
-
-import {
-  getAllRequests,
-  getReservations,
-} from "../../services/api";
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import AppHeader from '../../components/common/AppHeader';
+import AppCard from '../../components/common/AppCard';
+import AppButton from '../../components/common/AppButton';
+import StatusBadge from '../../components/common/StatusBadge';
+import LoadingView from '../../components/common/LoadingView';
+import EmptyState from '../../components/common/EmptyState';
+import { getAllRequests, getReservations } from '../../services/api';
+import { colors, spacing, typography } from '../../theme/theme';
 
 export default function HistoryScreen() {
-
   const navigation = useNavigation();
-
-  const [history, setHistory] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  const [tab, setTab] = useState('emergency');
+  const [requests, setRequests] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const loadHistory = async () => {
-
     try {
-
-      const requests = await getAllRequests();
-      const reservations = await getReservations();
-
-      const completedRequests = requests
-        .filter(item => item.status !== "REQUESTED")
-        .map(item => ({
-          ...item,
-          type: "Emergency Request",
-        }));
-
-      const completedReservations = reservations
-        .filter(item => item.status !== "REQUESTED")
-        .map(item => ({
-          ...item,
-          type: "Reservation",
-        }));
-
-      setHistory([
-        ...completedRequests,
-        ...completedReservations,
-      ]);
-
-    } catch (error) {
-      console.log(error);
+      setLoading(true);
+      const [requestData, reservationData] = await Promise.all([getAllRequests(), getReservations()]);
+      setRequests(Array.isArray(requestData) ? requestData.filter((item) => item.status && item.status !== 'REQUESTED') : []);
+      setReservations(Array.isArray(reservationData) ? reservationData.filter((item) => item.status && item.status !== 'REQUESTED') : []);
+    } catch {
+      setRequests([]);
+      setReservations([]);
+    } finally {
+      setLoading(false);
     }
-
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadHistory();
-    setRefreshing(false);
-  };
+  useEffect(() => { loadHistory(); }, []);
 
-  const getStatusColor = (status) => {
+  const renderEmergency = (item) => (
+    <AppCard key={`history-request-${item.id}`} style={styles.card} accent={colors.red}>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.kind}>Emergency history</Text>
+          <Text style={styles.patient}>{item.patientName || 'Patient not available'}</Text>
+        </View>
+        <StatusBadge status={item.status || 'Completed'} />
+      </View>
+      <View style={styles.infoList}>
+        <Text style={styles.info}><Text style={styles.label}>Blood group:</Text> {item.bloodGroup || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Units:</Text> {item.units ?? 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Hospital:</Text> {item.hospital || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Requester:</Text> {item.requestedBy || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Date:</Text> {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Not available'}</Text>
+      </View>
+    </AppCard>
+  );
 
-    switch (status) {
+  const renderReservation = (item) => (
+    <AppCard key={`history-reservation-${item.id}`} style={styles.card} accent={colors.navy}>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.kind}>Reservation history</Text>
+          <Text style={styles.patient}>{item.patientName || 'Patient not available'}</Text>
+        </View>
+        <StatusBadge status={item.status || 'Approved'} />
+      </View>
+      <View style={styles.infoList}>
+        <Text style={styles.info}><Text style={styles.label}>Blood group:</Text> {item.bloodGroup || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Units:</Text> {item.units ?? 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Hospital:</Text> {item.hospital || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Date:</Text> {item.reservationDate || 'Not available'}</Text>
+        <Text style={styles.info}><Text style={styles.label}>Time:</Text> {item.reservationTime || 'Not available'}</Text>
+      </View>
+    </AppCard>
+  );
 
-      case "ACCEPTED":
-        return "#2E7D32";
-
-      case "COMPLETED":
-        return "#1565C0";
-
-      default:
-        return "#EF6C00";
-    }
-
-  };
+  const selectedList = tab === 'emergency' ? requests : reservations;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <AppHeader title="History" subtitle="Completed emergency and reservation activity" onBack={() => navigation.goBack()} />
+      <View style={styles.container}>
+        <View style={styles.tabs}>
+          <AppButton variant={tab === 'emergency' ? 'primary' : 'secondary'} onPress={() => setTab('emergency')} style={styles.tabButton}>Emergency history</AppButton>
+          <AppButton variant={tab === 'reservation' ? 'primary' : 'secondary'} onPress={() => setTab('reservation')} style={styles.tabButton}>Reservation history</AppButton>
+        </View>
 
-      <Button
-        mode="text"
-        onPress={() => navigation.goBack()}
-      >
-        ← Back
-      </Button>
-
-      <Text style={styles.title}>
-        📜 History
-      </Text>
-
-      <FlatList
-        data={history}
-        keyExtractor={(item) =>
-          `${item.type}-${item.id}`
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        }
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            No History Available
-          </Text>
-        }
-        renderItem={({ item }) => (
-
-          <Card style={styles.card}>
-
-            <Card.Content>
-
-              <Text style={styles.type}>
-                {item.type}
-              </Text>
-
-              <Text style={styles.patient}>
-                {item.patientName}
-              </Text>
-
-              <InfoRow
-                label="Blood Group"
-                value={item.bloodGroup}
-              />
-
-              <InfoRow
-                label="Units"
-                value={String(item.units)}
-              />
-
-              <InfoRow
-                label="Hospital"
-                value={item.hospital}
-              />
-
-              {
-                item.type === "Reservation" && (
-                  <>
-                    <InfoRow
-                      label="Date"
-                      value={item.reservationDate}
-                    />
-
-                    <InfoRow
-                      label="Time"
-                      value={item.reservationTime}
-                    />
-                  </>
-                )
-              }
-
-              {
-                item.type === "Emergency Request" && (
-                  <InfoRow
-                    label="Urgency"
-                    value={item.urgency}
-                  />
-                )
-              }
-
-              <Text
-                style={[
-                  styles.status,
-                  {
-                    color: getStatusColor(item.status),
-                  },
-                ]}
-              >
-                {item.status}
-              </Text>
-
-            </Card.Content>
-
-          </Card>
-
+        {loading ? (
+          <LoadingView label="Loading history..." />
+        ) : selectedList.length === 0 ? (
+          <AppCard>
+            <EmptyState title={tab === 'emergency' ? 'No emergency history' : 'No reservation history'} message={tab === 'emergency' ? 'Completed emergency requests will appear here.' : 'Completed reservations will appear here.'} />
+          </AppCard>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContent}>
+            {tab === 'emergency' ? requests.map(renderEmergency) : reservations.map(renderReservation)}
+          </ScrollView>
         )}
-      />
-
+      </View>
     </SafeAreaView>
   );
 }
 
-function InfoRow({ label, value }) {
-
-  return (
-    <Text style={styles.info}>
-      <Text style={styles.label}>
-        {label}:
-      </Text>{" "}
-      {value}
-    </Text>
-  );
-
-}
-
 const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-    padding: 15,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#C62828",
-    marginBottom: 20,
-  },
-
-  card: {
-    marginBottom: 15,
-    borderRadius: 12,
-  },
-
-  type: {
-    color: "#C62828",
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-
-  patient: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-
-  info: {
-    marginBottom: 6,
-    fontSize: 16,
-  },
-
-  label: {
-    fontWeight: "bold",
-  },
-
-  status: {
-    marginTop: 15,
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-
-  empty: {
-    textAlign: "center",
-    marginTop: 80,
-    fontSize: 18,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  container: { flex: 1, padding: spacing.lg },
+  tabs: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  tabButton: { flex: 1 },
+  card: { marginBottom: spacing.md },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
+  kind: { ...typography.label, color: colors.muted, textTransform: 'uppercase' },
+  patient: { ...typography.heading, color: colors.navy, marginTop: 4 },
+  infoList: { marginBottom: spacing.sm },
+  info: { ...typography.caption, color: colors.text, marginBottom: 6 },
+  label: { color: colors.muted, fontWeight: '700' },
+  listContent: { paddingBottom: spacing.xxl },
 });

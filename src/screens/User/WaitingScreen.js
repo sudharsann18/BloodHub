@@ -47,7 +47,8 @@ const [loading, setLoading] = useState(true);
         },
       });
 
-      setRequest(response.data);
+      const reservations = Array.isArray(response.data) ? response.data : [];
+      setRequest(reservations[reservations.length - 1] || null);
 
     } else {
       response = await api.get("/request/my", {

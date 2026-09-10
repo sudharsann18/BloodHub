@@ -6,7 +6,6 @@ import {
   StyleSheet,
   View,
   Alert,
-  Linking,
   ActivityIndicator,
 } from 'react-native';
 
@@ -25,6 +24,7 @@ import {
   borderRadius,
   shadows,
 } from '../../constants/theme';
+import { openPhoneDialer } from '../../utils/deviceActions';
 
 export default function SOSDetailsScreen() {
 
@@ -230,35 +230,7 @@ export default function SOSDetailsScreen() {
   // CALL DONOR
   // ==================================================
 
-  const callDonor = async () => {
-
-    if (!sos?.donorPhone) {
-
-      Alert.alert(
-        'Phone Unavailable',
-        'Donor phone number is not available.'
-      );
-
-      return;
-    }
-
-
-    try {
-
-      await Linking.openURL(
-        `tel:${sos.donorPhone}`
-      );
-
-    } catch (error) {
-
-      Alert.alert(
-        'Error',
-        'Unable to open phone dialer.'
-      );
-
-    }
-
-  };
+  const callDonor = () => openPhoneDialer(sos?.donorPhone, 'Donor');
 
 
   // ==================================================
